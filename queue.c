@@ -8,6 +8,8 @@ typedef struct {
     int ID;
     int type;
     // you might want to add variables here!
+    int duration;
+    int arrivalTime;
 } Job;
 
 /* a link in the queue, holds the data and point to the next Node */
@@ -21,6 +23,7 @@ typedef struct Queue {
     NODE *head;
     NODE *tail;
     int size;
+    int duration;
     int limit;
 } Queue;
 
@@ -40,6 +43,7 @@ Queue *ConstructQueue(int limit) {
     }
     queue->limit = limit;
     queue->size = 0;
+    queue->duration = 0;
     queue->head = NULL;
     queue->tail = NULL;
 
@@ -78,6 +82,7 @@ int Enqueue(Queue *pQueue, Job j) {
         pQueue->tail = item;
     }
     pQueue->size++;
+    pQueue->duration += j.duration;
     return TRUE;
 }
 
@@ -90,6 +95,7 @@ Job Dequeue(Queue *pQueue) {
     item = pQueue->head;
     pQueue->head = (pQueue->head)->prev;
     pQueue->size--;
+    pQueue->duration -= item->data.duration;
     ret = item->data;
     free(item);
     return ret;
