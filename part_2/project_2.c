@@ -7,7 +7,7 @@
 #define LANDING_JOB 1
 #define LAUNCH_JOB 2
 #define ASSEMBLY_JOB 3
-#define UNIT_TIME 2
+#define UNIT_TIME 1
 // #define EMERGENCY_JOB 4 // TODO in part 3
 
 #define LANDING_JOB_DURATION 2
@@ -15,24 +15,24 @@
 #define ASSEMBLY_JOB_DURATION 12
 // #define EMERGENCY_JOB_DURATION 2 // TODO in part 3
 
-int simulationTime = 120;    // simulation time
-time_t deadline = 0;         // deadline
+int simulationTime = 120; // simulation time
+time_t deadline = 0;      // deadline
 time_t simulationStartTime = 0;
-int n = 30; // simulation start time
-int seed = 10;               // seed for randomness
+int n = 30;    // simulation start time
+int seed = 10; // seed for randomness
 // int emergencyFrequency = 40; // frequency of emergency // TODO in part 3
-float p = 0.2;               // probability of a ground job (launch & assembly)
+float p = 0.2; // probability of a ground job (launch & assembly)
 
-void* LandingJob(void *arg); 
-void* LaunchJob(void *arg);
-//void* EmergencyJob(void *arg); TODO in part 3
-void* AssemblyJob(void *arg); 
-void* ControlTower(void *arg);
-void* PadA(void *arg);
-void* PadB(void *arg);
-void* WriteLog(char* log);
-void* PrintCurrentQueues(void *arg);
-void* PrintQueue(Queue* queue);
+void *LandingJob(void *arg);
+void *LaunchJob(void *arg);
+// void* EmergencyJob(void *arg); TODO in part 3
+void *AssemblyJob(void *arg);
+void *ControlTower(void *arg);
+void *PadA(void *arg);
+void *PadB(void *arg);
+void *WriteLog(char *log);
+void *PrintCurrentQueues(void *arg);
+void *PrintQueue(Queue *queue);
 
 Queue *landingQueue;
 Queue *launchQueue;
@@ -53,47 +53,62 @@ pthread_mutex_t padBQueueMutex;
 pthread_mutex_t logFileMutex;
 
 // pthread sleeper function
-int pthread_sleep (int seconds)
+int pthread_sleep(int seconds)
 {
     pthread_mutex_t mutex;
     pthread_cond_t conditionvar;
     struct timespec timetoexpire;
-    if(pthread_mutex_init(&mutex,NULL))
+    if (pthread_mutex_init(&mutex, NULL))
     {
         return -1;
     }
-    if(pthread_cond_init(&conditionvar,NULL))
+    if (pthread_cond_init(&conditionvar, NULL))
     {
         return -1;
     }
     struct timeval tp;
-    //When to expire is an absolute time, so get the current time and add it to our delay time
+    // When to expire is an absolute time, so get the current time and add it to our delay time
     gettimeofday(&tp, NULL);
-    timetoexpire.tv_sec = tp.tv_sec + seconds; timetoexpire.tv_nsec = tp.tv_usec * 1000;
-    
-    pthread_mutex_lock (&mutex);
-    int res =  pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
-    pthread_mutex_unlock (&mutex);
+    timetoexpire.tv_sec = tp.tv_sec + seconds;
+    timetoexpire.tv_nsec = tp.tv_usec * 1000;
+
+    pthread_mutex_lock(&mutex);
+    int res = pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
+    pthread_mutex_unlock(&mutex);
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&conditionvar);
-    
-    //Upon successful completion, a value of zero shall be returned
+
+    // Upon successful completion, a value of zero shall be returned
     return res;
 }
 
-int main(int argc,char **argv){
+int main(int argc, char **argv)
+{
     // -p (float) => sets p
     // -t (int) => simulation time in seconds
     // -s (int) => change the random seed
-    for(int i=1; i<argc; i++){
-        if(!strcmp(argv[i], "-p")) {p = atof(argv[++i]);}
-        else if(!strcmp(argv[i], "-t")) {simulationTime = atoi(argv[++i]);}
-        else if(!strcmp(argv[i], "-s"))  {seed = atoi(argv[++i]);}
-        else if(!strcmp(argv[i], "-n"))  {n = atoi(argv[++i]);}
+    for (int i = 1; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "-p"))
+        {
+            p = atof(argv[++i]);
+        }
+        else if (!strcmp(argv[i], "-t"))
+        {
+            simulationTime = atoi(argv[++i]);
+        }
+        else if (!strcmp(argv[i], "-s"))
+        {
+            seed = atoi(argv[++i]);
+        }
+        else if (!strcmp(argv[i], "-n"))
+        {
+            n = atoi(argv[++i]);
+        }
     }
-    
+
     srand(seed); // feed the seed
-    
+
     /* Queue usage example
         Queue *myQ = ConstructQueue(1000);
         Job j;
@@ -173,21 +188,24 @@ int main(int argc,char **argv){
 }
 
 // the function that creates plane threads for landing
-void* LandingJob(void *arg){
-    while(time(NULL) < deadline){
+void *LandingJob(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // sleep for UNIT_TIME seconds
         pthread_sleep(UNIT_TIME);
         // create a landing job with probability 1-p
-        if(rand()%100 < 100-p*100){
+        if (rand() % 100 < 100 - p * 100)
+        {
             Job j;
-            j.ID = rand()%1000;
+            j.ID = rand() % 1000;
             j.type = LANDING_JOB;
             j.duration = LANDING_JOB_DURATION;
             j.arrivalTime = time(NULL) - simulationStartTime;
             // lock the landing queue
             pthread_mutex_lock(&landingQueueMutex);
             // print the job id type and the time for debugging
-            //printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
+            // printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
             Enqueue(landingQueue, j);
             // unlock the landing queue
             pthread_mutex_unlock(&landingQueueMutex);
@@ -197,21 +215,24 @@ void* LandingJob(void *arg){
 }
 
 // the function that creates plane threads for departure
-void* LaunchJob(void *arg){
-    while(time(NULL) < deadline){
+void *LaunchJob(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // sleep for UNIT_TIME seconds
         pthread_sleep(UNIT_TIME);
         // create a landing job with probability p/2
-        if(rand()%100 < (p/2)*100){
+        if (rand() % 100 < (p / 2) * 100)
+        {
             Job j;
-            j.ID = rand()%1000;
+            j.ID = rand() % 1000;
             j.type = LAUNCH_JOB;
             j.duration = LAUNCH_JOB_DURATION;
             j.arrivalTime = time(NULL) - simulationStartTime;
             // lock the landing queue
             pthread_mutex_lock(&launchQueueMutex);
             // print the job id type and the time for debugging
-            //printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
+            // printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
             Enqueue(launchQueue, j);
             // unlock the landing queue
             pthread_mutex_unlock(&launchQueueMutex);
@@ -226,21 +247,24 @@ void* LaunchJob(void *arg){
 // }
 
 // the function that creates plane threads for emergency landing
-void* AssemblyJob(void *arg){
-    while(time(NULL) < deadline){
+void *AssemblyJob(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // sleep for UNIT_TIME seconds
         pthread_sleep(UNIT_TIME);
         // create a landing job with probability p/2
-        if(rand()%100 < (p/2)*100){
+        if (rand() % 100 < (p / 2) * 100)
+        {
             Job j;
-            j.ID = rand()%1000;
+            j.ID = rand() % 1000;
             j.type = ASSEMBLY_JOB;
             j.duration = ASSEMBLY_JOB_DURATION;
             j.arrivalTime = time(NULL) - simulationStartTime;
             // lock the landing queue
             pthread_mutex_lock(&assemblyQueueMutex);
             // print the job id type and the time for debugging
-            //printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
+            // printf("id: %d type: %d time: %d\n", j.ID, j.type, time(NULL));
             Enqueue(assemblyQueue, j);
             // unlock the landing queue
             pthread_mutex_unlock(&assemblyQueueMutex);
@@ -250,92 +274,164 @@ void* AssemblyJob(void *arg){
 }
 
 // the function that controls the air traffic
-void* ControlTower(void *arg){
-    while(time(NULL) < deadline){
-        // lock the landing queue
-        pthread_mutex_lock(&landingQueueMutex);
-        while(!isEmpty(landingQueue)){
+void *ControlTower(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
+
+        // lock the landing, launch, and assembly queues
+        pthread_mutex_lock(&launchQueueMutex);
+        pthread_mutex_lock(&assemblyQueueMutex);
+
+        // if the launch or assembly queue has less than 3 jobs, then empty the landing queue
+        if (launchQueue->size < 3 && assemblyQueue->size < 3)
+        {
+            // unlock the launch and assembly queues
+            pthread_mutex_unlock(&launchQueueMutex);
+            pthread_mutex_unlock(&assemblyQueueMutex);
+
+            // lock the landing queue
+            pthread_mutex_lock(&landingQueueMutex);
+            // empty the landing queue
+            while (!isEmpty(landingQueue))
+            {
+                // lock padAQueue and padBQueue
+                pthread_mutex_lock(&padAQueueMutex);
+                pthread_mutex_lock(&padBQueueMutex);
+                if (padAQueue->duration <= padBQueue->duration)
+                {
+                    Enqueue(padAQueue, Dequeue(landingQueue));
+                }
+                else
+                {
+                    Enqueue(padBQueue, Dequeue(landingQueue));
+                }
+                // unlock padAQueue and padBQueue
+                pthread_mutex_unlock(&padAQueueMutex);
+                pthread_mutex_unlock(&padBQueueMutex);
+            }
+            // unlock the landing queue
+            pthread_mutex_unlock(&landingQueueMutex);
+
+            // lock the padAQueue and launchQueue
+            pthread_mutex_lock(&padAQueueMutex);
+            pthread_mutex_lock(&launchQueueMutex);
+
+            if (!isEmpty(launchQueue))
+            {
+                Enqueue(padAQueue, Dequeue(launchQueue));
+            }
+            // unlock the padAQueue and launchQueue
+            pthread_mutex_unlock(&padAQueueMutex);
+            pthread_mutex_unlock(&launchQueueMutex);
+
+            // lock the padBQueue and assemblyQueue
+            pthread_mutex_lock(&padBQueueMutex);
+            pthread_mutex_lock(&assemblyQueueMutex);
+
+            if (!isEmpty(assemblyQueue))
+            {
+                Enqueue(padBQueue, Dequeue(assemblyQueue));
+            }
+            // unlock the padBQueue and assemblyQueue
+            pthread_mutex_unlock(&padBQueueMutex);
+            pthread_mutex_unlock(&assemblyQueueMutex);
+        }
+        else // Take one job from each queue
+        {
             // lock padAQueue and padBQueue
             pthread_mutex_lock(&padAQueueMutex);
             pthread_mutex_lock(&padBQueueMutex);
-            if(padAQueue->duration <= padBQueue->duration){
-                Enqueue(padAQueue, Dequeue(landingQueue));
+
+            // if launchQueue is not empty, take the first job from launchQueue and put it in padAQueue
+            if (!isEmpty(launchQueue))
+            {
+                Enqueue(padAQueue, Dequeue(launchQueue));
             }
-            else{
-                Enqueue(padBQueue, Dequeue(landingQueue));
+            // unlock launchQueue
+            pthread_mutex_unlock(&launchQueueMutex);
+
+            // if assemblyQueue is not empty, take the first job from assemblyQueue and put it in padBQueue
+            if (!isEmpty(assemblyQueue))
+            {
+                Enqueue(padBQueue, Dequeue(assemblyQueue));
             }
-            // unlock padAQueue and padBQueue
+            // unlock assemblyQueue
+            pthread_mutex_unlock(&assemblyQueueMutex);
+
+            // if landingQueue is not empty, take the first job from landingQueue and put it in shortest pad
+            // lock landingQueue
+            pthread_mutex_lock(&landingQueueMutex);
+            if (!isEmpty(landingQueue))
+            {
+                if (padAQueue->duration <= padBQueue->duration)
+                {
+                    Enqueue(padAQueue, Dequeue(landingQueue));
+                }
+                else
+                {
+                    Enqueue(padBQueue, Dequeue(landingQueue));
+                }
+            }
+
+            // unlock padAQueue, padBQueue, and landingQueue
             pthread_mutex_unlock(&padAQueueMutex);
             pthread_mutex_unlock(&padBQueueMutex);
+            pthread_mutex_unlock(&landingQueueMutex);
         }
-        // unlock the landing queue
-        pthread_mutex_unlock(&landingQueueMutex);
-
-        // lock the padAQueue and launchQueue
-        pthread_mutex_lock(&padAQueueMutex);
-        pthread_mutex_lock(&launchQueueMutex);
-
-        if (isEmpty(padAQueue) && !isEmpty(launchQueue)) {
-            Enqueue(padAQueue, Dequeue(launchQueue));
-        }
-        // unlock the padAQueue and launchQueue
-        pthread_mutex_unlock(&padAQueueMutex);
-        pthread_mutex_unlock(&launchQueueMutex);
-
-        // lock the padBQueue and assemblyQueue
-        pthread_mutex_lock(&padBQueueMutex);
-        pthread_mutex_lock(&assemblyQueueMutex);
-
-        if (isEmpty(padBQueue) && !isEmpty(assemblyQueue)) {
-            Enqueue(padBQueue, Dequeue(assemblyQueue));
-        }
-        // unlock the padBQueue and assemblyQueue
-        pthread_mutex_unlock(&padBQueueMutex);
-        pthread_mutex_unlock(&assemblyQueueMutex);
     }
+
     return NULL;
 }
 
-void* PadA(void *arg){
-    while(time(NULL) < deadline){
+void *PadA(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // lock padAQueue
         pthread_mutex_lock(&padAQueueMutex);
-        if(isEmpty(padAQueue)){
+        if (isEmpty(padAQueue))
+        {
             pthread_mutex_unlock(&padAQueueMutex);
             // sleep for UNIT_TIME seconds
             pthread_sleep(UNIT_TIME);
         }
-        else {
+        else
+        {
             int sleepTime = padAQueue->head->data.duration;
             // unlock padAQueue
             pthread_mutex_unlock(&padAQueueMutex);
-            
+
             pthread_sleep(padAQueue->head->data.duration);
 
-            pthread_mutex_lock(&padAQueueMutex);    
+            pthread_mutex_lock(&padAQueueMutex);
             Job j = Dequeue(padAQueue);
             pthread_mutex_unlock(&padAQueueMutex);
 
             // create the log string
             time_t end_time = time(NULL) - simulationStartTime;
             char log[100];
-            sprintf(log, "%-5d %5d %10d %10d %10d %10c\n", j.ID, j.type, j.arrivalTime, end_time, end_time-j.arrivalTime, 'A');
+            sprintf(log, "%-5d %5d %10d %10d %10d %10c\n", j.ID, j.type, j.arrivalTime, end_time, end_time - j.arrivalTime, 'A');
             WriteLog(log);
         }
     }
     return NULL;
 }
 
-void* PadB(void *arg){
-    while(time(NULL) < deadline){
+void *PadB(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // lock padBQueue
         pthread_mutex_lock(&padBQueueMutex);
-        if(isEmpty(padBQueue)){
+        if (isEmpty(padBQueue))
+        {
             pthread_mutex_unlock(&padBQueueMutex);
             // sleep for UNIT_TIME seconds
             pthread_sleep(UNIT_TIME);
         }
-        else {
+        else
+        {
             int sleepTime = padBQueue->head->data.duration;
             // unlock padBQueue
             pthread_mutex_unlock(&padBQueueMutex);
@@ -348,7 +444,7 @@ void* PadB(void *arg){
             // create the log string
             time_t end_time = time(NULL) - simulationStartTime;
             char log[100];
-            sprintf(log, "%-5d %5d %10d %10d %10d %10c\n", j.ID, j.type, j.arrivalTime, end_time, end_time-j.arrivalTime, 'B');
+            sprintf(log, "%-5d %5d %10d %10d %10d %10c\n", j.ID, j.type, j.arrivalTime, end_time, end_time - j.arrivalTime, 'B');
             WriteLog(log);
         }
     }
@@ -356,27 +452,31 @@ void* PadB(void *arg){
 }
 
 // open log.txt, protect it with mutex, and write the log to it
-void* WriteLog(char* log){
+void *WriteLog(char *log)
+{
     // lock the log file
     pthread_mutex_lock(&logFileMutex);
     // open the log file
-    FILE* fp = fopen("log.txt", "a");
+    FILE *fp = fopen("log.txt", "a");
     // write the log to the log file
     fprintf(fp, "%s", log);
     // close the log file
     fclose(fp);
     // unlock the log file
     pthread_mutex_unlock(&logFileMutex);
-    
+
     return NULL;
 }
 
-void* PrintCurrentQueues(void *arg){
-    while(time(NULL) < deadline){
+void *PrintCurrentQueues(void *arg)
+{
+    while (time(NULL) < deadline)
+    {
         // sleep for 1 seconds
         pthread_sleep(1);
         int current_time = time(NULL) - simulationStartTime;
-        if(n <= current_time){
+        if (n <= current_time)
+        {
             // lock the landing queue
             pthread_mutex_lock(&landingQueueMutex);
             // print the landing queue
@@ -421,13 +521,17 @@ void* PrintCurrentQueues(void *arg){
     return NULL;
 }
 
-void* PrintQueue(Queue* q){
-    if(isEmpty(q)){
+void *PrintQueue(Queue *q)
+{
+    if (isEmpty(q))
+    {
         printf("empty\n");
     }
-    else{
-        NODE* curr = q->head;
-        while(curr != NULL){
+    else
+    {
+        NODE *curr = q->head;
+        while (curr != NULL)
+        {
             printf("%d ", curr->data.ID);
             curr = curr->prev;
         }
