@@ -7,6 +7,7 @@
 #define LANDING_JOB 1
 #define LAUNCH_JOB 2
 #define ASSEMBLY_JOB 3
+#define UNIT_TIME 2
 // #define EMERGENCY_JOB 4 // TODO in part 3
 
 #define LANDING_JOB_DURATION 2
@@ -174,8 +175,8 @@ int main(int argc,char **argv){
 // the function that creates plane threads for landing
 void* LandingJob(void *arg){
     while(time(NULL) < deadline){
-        // sleep for 2 seconds
-        pthread_sleep(2);
+        // sleep for UNIT_TIME seconds
+        pthread_sleep(UNIT_TIME);
         // create a landing job with probability 1-p
         if(rand()%100 < 100-p*100){
             Job j;
@@ -198,8 +199,8 @@ void* LandingJob(void *arg){
 // the function that creates plane threads for departure
 void* LaunchJob(void *arg){
     while(time(NULL) < deadline){
-        // sleep for 2 seconds
-        pthread_sleep(2);
+        // sleep for UNIT_TIME seconds
+        pthread_sleep(UNIT_TIME);
         // create a landing job with probability p/2
         if(rand()%100 < (p/2)*100){
             Job j;
@@ -227,8 +228,8 @@ void* LaunchJob(void *arg){
 // the function that creates plane threads for emergency landing
 void* AssemblyJob(void *arg){
     while(time(NULL) < deadline){
-        // sleep for 2 seconds
-        pthread_sleep(2);
+        // sleep for UNIT_TIME seconds
+        pthread_sleep(UNIT_TIME);
         // create a landing job with probability p/2
         if(rand()%100 < (p/2)*100){
             Job j;
@@ -301,8 +302,8 @@ void* PadA(void *arg){
         pthread_mutex_lock(&padAQueueMutex);
         if(isEmpty(padAQueue)){
             pthread_mutex_unlock(&padAQueueMutex);
-            // sleep for 2 seconds
-            pthread_sleep(2);
+            // sleep for UNIT_TIME seconds
+            pthread_sleep(UNIT_TIME);
         }
         else {
             int sleepTime = padAQueue->head->data.duration;
@@ -331,8 +332,8 @@ void* PadB(void *arg){
         pthread_mutex_lock(&padBQueueMutex);
         if(isEmpty(padBQueue)){
             pthread_mutex_unlock(&padBQueueMutex);
-            // sleep for 2 seconds
-            pthread_sleep(2);
+            // sleep for UNIT_TIME seconds
+            pthread_sleep(UNIT_TIME);
         }
         else {
             int sleepTime = padBQueue->head->data.duration;
