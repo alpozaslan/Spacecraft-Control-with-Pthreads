@@ -310,7 +310,7 @@ void* PadA(void *arg){
             // unlock padAQueue
             pthread_mutex_unlock(&padAQueueMutex);
             
-            pthread_sleep(padAQueue->head->data.duration);
+            pthread_sleep(sleepTime);
 
             pthread_mutex_lock(&padAQueueMutex);    
             Job j = Dequeue(padAQueue);
@@ -339,7 +339,7 @@ void* PadB(void *arg){
             int sleepTime = padBQueue->head->data.duration;
             // unlock padBQueue
             pthread_mutex_unlock(&padBQueueMutex);
-            pthread_sleep(padBQueue->head->data.duration);
+            pthread_sleep(sleepTime);
 
             pthread_mutex_lock(&padBQueueMutex);
             Job j = Dequeue(padBQueue);
